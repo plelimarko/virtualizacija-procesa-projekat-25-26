@@ -1,6 +1,0 @@
-C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Common\bin\Debug\Common1.dll
-C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Common\bin\Debug\Common1.pdb
-C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Common\obj\Debug\Common.csproj.AssemblyReference.cache
-C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Common\obj\Debug\Common.csproj.CoreCompileInputs.cache
-C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Common\obj\Debug\Common1.dll
-C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Common\obj\Debug\Common1.pdb
