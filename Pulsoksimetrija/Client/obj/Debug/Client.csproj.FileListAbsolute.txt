@@ -1,0 +1,7 @@
+C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Client\bin\Debug\Client.exe.config
+C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Client\bin\Debug\Client.exe
+C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Client\bin\Debug\Client.pdb
+C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Client\obj\Debug\Client.csproj.AssemblyReference.cache
+C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Client\obj\Debug\Client.csproj.CoreCompileInputs.cache
+C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Client\obj\Debug\Client.exe
+C:\Users\0\Documents\GitHub\virtualizacija-procesa-projekat-25-26\Pulsoksimetrija\Client\obj\Debug\Client.pdb
