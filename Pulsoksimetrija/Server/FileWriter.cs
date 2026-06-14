@@ -25,7 +25,6 @@ namespace Server
         public void WriteLine(string line)
         {
             writer.WriteLine(line);
-            writer.Flush();
         }
 
         public void Dispose()
@@ -40,6 +39,7 @@ namespace Server
             {
                 if (disposing)
                 {
+                    writer?.Flush();
                     writer?.Close();
                     writer?.Dispose();
                 }

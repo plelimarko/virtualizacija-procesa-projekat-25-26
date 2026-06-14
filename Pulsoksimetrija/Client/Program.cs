@@ -1,5 +1,6 @@
 ﻿using Common;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.ServiceModel;
 
@@ -11,23 +12,17 @@ namespace Client
         {
             Console.WriteLine("=== Pokretanje GalaxyPPG Klijenta ===");
 
-            // 1. Dinamički unos učesnika
             Console.Write("Unesite broj učesnika (npr. 01, 02.. ili P01, P24): ");
             string input = Console.ReadLine().Trim().ToUpper();
 
             string participant = input;
             if (!participant.StartsWith("P"))
             {
-                // Ako korisnik unese samo "1", formatiramo ga u "P01"
                 participant = "P" + input.PadLeft(2, '0');
             }
 
-            // 2. Dinamičko kreiranje putanje
-            // Klijent se pokreće iz ...\Client\bin\Debug
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            // Idemo 3 nivoa gore do glavnog foldera rešenja
             string rootDir = Directory.GetParent(baseDir).Parent.Parent.FullName;
-            // Sklapamo punu putanju
             string filePath = Path.Combine(rootDir, "Dataset", participant, "PolarH10", "ECG.csv");
 
             if (!File.Exists(filePath))
@@ -40,16 +35,15 @@ namespace Client
             Console.WriteLine($"\n✓ Započinjem proces za učesnika: {participant}");
             Console.WriteLine($"✓ Fajl pronađen: {filePath}");
 
-            // 3. Pokretanje WCF komunikacije (IDisposable klijent)
             ChannelFactory<IEcgService> factory = new ChannelFactory<IEcgService>("EcgEndpoint");
             IEcgService proxy = factory.CreateChannel();
 
             try
             {
-                var meta = new SessionMeta
+                SessionMeta meta = new SessionMeta
                 {
                     ParticipantId = participant,
-                    DeviceId = "Polar H10",
+                    DeviceId = "PolarH10",
                     SampleRateHz = 130
                 };
 
@@ -57,28 +51,40 @@ namespace Client
                 Console.WriteLine("\n[WCF] Sesija uspešno otvorena.");
 
                 CsvParser parser = new CsvParser();
-                var samples = parser.ParseEcgCsv(filePath, participant);
+                List<EcgSample> samples = parser.ParseEcgCsv(filePath, participant);
+                Console.WriteLine($"[CSV] Učitano {samples.Count} validnih zapisa. Slanje...");
 
-                Console.WriteLine($"[CSV] Učitano {samples.Count} validnih zapisa u memoriju. Slanje...");
+                int okCount = 0;
+                int rejectedCount = 0;
 
-                foreach (var s in samples)
+                int total = samples.Count;
+
+                foreach (EcgSample s in samples)
                 {
                     try
                     {
                         proxy.PushSample(s);
+                        okCount++;
                     }
                     catch (FaultException<ValidationFault> vf)
                     {
-                        Console.WriteLine($"[Validacija] Red {s.RowIndex}: {vf.Detail.Message} (Polje: {vf.Detail.Parametar})");
+                        rejectedCount++;
                     }
                     catch (FaultException<DataFormatFault> df)
                     {
-                        Console.WriteLine($"[Format] Red {s.RowIndex}: {df.Detail.Message} (Polje: {df.Detail.Details})");
+                        rejectedCount++;
+                    }
+
+                    int current = okCount + rejectedCount;
+                    if (current % 10000 == 0)
+                    {
+                        Console.WriteLine($"[Progres] {current}/{total} ({(current * 100 / total)}%)");
                     }
                 }
 
                 proxy.EndSession();
-                Console.WriteLine("\n[WCF] Prenos završen. Sesija zatvorena.");
+                Console.WriteLine($"\n[Rezultat] Prihvaćeno: {okCount}, Odbijeno na serveru: {rejectedCount}");
+                Console.WriteLine("[WCF] Prenos završen. Sesija zatvorena.");
             }
             catch (Exception ex)
             {

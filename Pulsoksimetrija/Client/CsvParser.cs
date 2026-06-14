@@ -2,6 +2,7 @@
 using Common;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Globalization;
 using System.IO;
 
@@ -12,47 +13,65 @@ namespace Client
         public List<EcgSample> ParseEcgCsv(string filePath, string participantId)
         {
             List<EcgSample> samples = new List<EcgSample>();
+            string rejectPath = Path.Combine(
+                Path.GetDirectoryName(filePath), "rejected_client.csv");
 
-            // Task 4: IDisposable nad StreamReader (using blok)
-            using (var reader = new StreamReader(filePath))
+            double ecgMin = double.Parse(ConfigurationManager.AppSettings["EcgMinMicroV"]);
+            double ecgMax = double.Parse(ConfigurationManager.AppSettings["EcgMaxMicroV"]);
+
+            using (StreamReader reader = new StreamReader(filePath))
+            using (StreamWriter rejectWriter = new StreamWriter(rejectPath, false))
             {
-                // Task 5: Preskočiti zaglavlje
                 reader.ReadLine();
 
                 int rowIndex = 1;
                 while (!reader.EndOfStream)
                 {
-                    var line = reader.ReadLine();
+                    string line = reader.ReadLine();
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    var parts = line.Split(',');
+                    string[] parts = line.Split(',');
                     try
                     {
-                        // Task 5: Parsiranje 9 kanala sa InvariantCulture
+                        if (parts.Length < 3)
+                        {
+                            throw new FormatException("Red nema dovoljno kolona.");
+                        }
+
+                        long timestamp = long.Parse(parts[0], CultureInfo.InvariantCulture);
+                        double? ecgValue = ParseNullableDouble(parts[2]);
+
+                        if (ecgValue.HasValue && (ecgValue < ecgMin || ecgValue > ecgMax))
+                        {
+                            rejectWriter.WriteLine(
+                                $"{rowIndex},EcgMicroV van opsega ({ecgValue}),{line}");
+                            rowIndex++;
+                            continue;
+                        }
+
                         samples.Add(new EcgSample
                         {
-                            TimestampMs = long.Parse(parts[0]),
-                            EcgMicroV = ParseNullableDouble(parts[1]),
-                            HeartRate = ParseNullableDouble(parts[2]),
-                            IBI_ms = ParseNullableDouble(parts[3]),
-                            AccX = ParseNullableDouble(parts[4]),
-                            AccY = ParseNullableDouble(parts[5]),
-                            AccZ = ParseNullableDouble(parts[6]),
+                            TimestampMs = timestamp,
+                            EcgMicroV = ecgValue,
+                            HeartRate = null,
+                            IBI_ms = null,
+                            AccX = null,
+                            AccY = null,
+                            AccZ = null,
                             ParticipantId = participantId,
                             RowIndex = rowIndex++
                         });
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Task 5: Problematične redove pišemo u rejects_client.csv
-                        File.AppendAllText("rejected_client.csv", $"{line}{Environment.NewLine}");
+                        rejectWriter.WriteLine($"{rowIndex},{ex.Message},{line}");
+                        rowIndex++;
                     }
                 }
             }
             return samples;
         }
 
-        // Task 5: NaN mapirati na null
         private double? ParseNullableDouble(string value)
         {
             if (value.Trim().Equals("NaN", StringComparison.OrdinalIgnoreCase)) return null;
