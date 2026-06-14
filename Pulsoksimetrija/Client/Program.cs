@@ -1,6 +1,7 @@
 ﻿using Common;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.ServiceModel;
 
@@ -52,39 +53,28 @@ namespace Client
 
                 CsvParser parser = new CsvParser();
                 List<EcgSample> samples = parser.ParseEcgCsv(filePath, participant);
-                Console.WriteLine($"[CSV] Učitano {samples.Count} validnih zapisa. Slanje...");
+                Console.WriteLine($"[CSV] Učitano {samples.Count} validnih zapisa.");
 
-                int okCount = 0;
-                int rejectedCount = 0;
+                int batchSize = int.Parse(ConfigurationManager.AppSettings["BatchSize"]);
+                int totalBatches = (samples.Count + batchSize - 1) / batchSize;
+                int batchNumber = 0;
 
-                int total = samples.Count;
-
-                foreach (EcgSample s in samples)
+                for (int i = 0; i < samples.Count; i += batchSize)
                 {
-                    try
-                    {
-                        proxy.PushSample(s);
-                        okCount++;
-                    }
-                    catch (FaultException<ValidationFault> vf)
-                    {
-                        rejectedCount++;
-                    }
-                    catch (FaultException<DataFormatFault> df)
-                    {
-                        rejectedCount++;
-                    }
+                    int count = Math.Min(batchSize, samples.Count - i);
+                    List<EcgSample> batch = samples.GetRange(i, count);
 
-                    int current = okCount + rejectedCount;
-                    if (current % 10000 == 0)
+                    string result = proxy.PushBatch(batch);
+                    batchNumber++;
+
+                    if (batchNumber % 1000 == 0 || batchNumber == totalBatches)
                     {
-                        Console.WriteLine($"[Progres] {current}/{total} ({(current * 100 / total)}%)");
+                        Console.WriteLine($"[Blok {batchNumber}/{totalBatches}] {result}");
                     }
                 }
 
                 proxy.EndSession();
-                Console.WriteLine($"\n[Rezultat] Prihvaćeno: {okCount}, Odbijeno na serveru: {rejectedCount}");
-                Console.WriteLine("[WCF] Prenos završen. Sesija zatvorena.");
+                Console.WriteLine("\n[WCF] Prenos završen. Sesija zatvorena.");
             }
             catch (Exception ex)
             {

@@ -83,6 +83,49 @@ namespace Server
             fileWriter.WriteLine(line);
         }
 
+
+        public string PushBatch(List<EcgSample> batch)
+        {
+            int accepted = 0;
+            int rejected = 0;
+
+            foreach (EcgSample sample in batch)
+            {
+                if (sample.TimestampMs <= _lastTimestamp)
+                {
+                    rejectWriter.WriteLine(
+                        $"{sample.RowIndex},Timestamp nije rastuci,{sample.TimestampMs}");
+                    rejected++;
+                    continue;
+                }
+                _lastTimestamp = sample.TimestampMs;
+
+                if (sample.EcgMicroV.HasValue && (sample.EcgMicroV < ecgMin || sample.EcgMicroV > ecgMax))
+                {
+                    rejectWriter.WriteLine(
+                        $"{sample.RowIndex},EcgMicroV van opsega,{sample.TimestampMs},{sample.EcgMicroV}");
+                    rejected++;
+                    continue;
+                }
+
+                if (sample.HeartRate.HasValue && (sample.HeartRate < hrMin || sample.HeartRate > hrMax))
+                {
+                    rejectWriter.WriteLine(
+                        $"{sample.RowIndex},HeartRate van opsega,{sample.TimestampMs},{sample.HeartRate}");
+                    rejected++;
+                    continue;
+                }
+
+                string line = $"{sample.TimestampMs},{sample.EcgMicroV},{sample.HeartRate}," +
+                               $"{sample.IBI_ms},{sample.AccX},{sample.AccY},{sample.AccZ},{sample.RowIndex}";
+                fileWriter.WriteLine(line);
+                accepted++;
+            }
+
+            Console.WriteLine($"[BLOK] Primljen blok od {batch.Count} uzoraka. Prihvaćeno: {accepted}, Odbijeno: {rejected}");
+            return $"OK:{accepted},REJECTED:{rejected}";
+        }
+
         public void EndSession()
         {
             Console.WriteLine("[SESIJA] Kraj prenosa.");

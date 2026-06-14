@@ -21,6 +21,12 @@ namespace Common
         [FaultContract(typeof(ValidationFault))]
         void PushSample(EcgSample sample);
 
+
+        [OperationContract(IsInitiating = false)]
+        [FaultContract(typeof(DataFormatFault))]
+        [FaultContract(typeof(ValidationFault))]
+        string PushBatch(List<EcgSample> batch);
+
         [OperationContract(IsInitiating = false, IsTerminating = true)]
         void EndSession();
     }

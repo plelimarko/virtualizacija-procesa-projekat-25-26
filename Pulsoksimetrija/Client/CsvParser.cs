@@ -16,9 +16,6 @@ namespace Client
             string rejectPath = Path.Combine(
                 Path.GetDirectoryName(filePath), "rejected_client.csv");
 
-            double ecgMin = double.Parse(ConfigurationManager.AppSettings["EcgMinMicroV"]);
-            double ecgMax = double.Parse(ConfigurationManager.AppSettings["EcgMaxMicroV"]);
-
             using (StreamReader reader = new StreamReader(filePath))
             using (StreamWriter rejectWriter = new StreamWriter(rejectPath, false))
             {
@@ -38,21 +35,10 @@ namespace Client
                             throw new FormatException("Red nema dovoljno kolona.");
                         }
 
-                        long timestamp = long.Parse(parts[0], CultureInfo.InvariantCulture);
-                        double? ecgValue = ParseNullableDouble(parts[2]);
-
-                        if (ecgValue.HasValue && (ecgValue < ecgMin || ecgValue > ecgMax))
-                        {
-                            rejectWriter.WriteLine(
-                                $"{rowIndex},EcgMicroV van opsega ({ecgValue}),{line}");
-                            rowIndex++;
-                            continue;
-                        }
-
                         samples.Add(new EcgSample
                         {
-                            TimestampMs = timestamp,
-                            EcgMicroV = ecgValue,
+                            TimestampMs = long.Parse(parts[0], CultureInfo.InvariantCulture),
+                            EcgMicroV = ParseNullableDouble(parts[2]),
                             HeartRate = null,
                             IBI_ms = null,
                             AccX = null,
