@@ -10,8 +10,41 @@ namespace Server
     public class FileWriter : IDisposable
     {
         private StreamWriter writer;
-        public FileWriter(string path) => writer = new StreamWriter(path, true);
-        public void WriteLine(string line) { writer.WriteLine(line); writer.Flush(); }
-        public void Dispose() { writer?.Close(); writer?.Dispose(); }
+        private bool disposed = false;
+
+        public FileWriter(string path)
+        {
+            writer = new StreamWriter(path, true);
+        }
+
+        ~FileWriter()
+        {
+            Dispose(false);
+        }
+
+        public void WriteLine(string line)
+        {
+            writer.WriteLine(line);
+            writer.Flush();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    writer?.Close();
+                    writer?.Dispose();
+                }
+                disposed = true;
+            }
+        }
     }
 }

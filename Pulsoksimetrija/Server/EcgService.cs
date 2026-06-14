@@ -1,6 +1,7 @@
 ﻿using Common;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.ServiceModel;
@@ -14,6 +15,12 @@ namespace Server
     {
         private FileWriter fileWriter;
         private long _lastTimestamp = -1; // Za proveru monotonog rasta
+
+
+        private double ecgMin = double.Parse(ConfigurationManager.AppSettings["EcgMinMicroV"]);
+        private double ecgMax = double.Parse(ConfigurationManager.AppSettings["EcgMaxMicroV"]);
+        private double hrMin = double.Parse(ConfigurationManager.AppSettings["HrMinBpm"]);
+        private double hrMax = double.Parse(ConfigurationManager.AppSettings["HrMaxBpm"]);
 
         public void StartSession(SessionMeta meta)
         {
@@ -38,7 +45,7 @@ namespace Server
             _lastTimestamp = sample.TimestampMs;
 
             // 2. Validacija: Opseg EKG [-5000, 5000]
-            if (sample.EcgMicroV.HasValue && (sample.EcgMicroV < -5000 || sample.EcgMicroV > 5000))
+            if (sample.EcgMicroV.HasValue && (sample.EcgMicroV < ecgMin || sample.EcgMicroV > ecgMax))
             {
                 throw new FaultException<DataFormatFault>(new DataFormatFault
                 {
@@ -48,7 +55,7 @@ namespace Server
             }
 
             // 3. Validacija: Opseg pulsa [30, 220]
-            if (sample.HeartRate.HasValue && (sample.HeartRate < 30 || sample.HeartRate > 220))
+            if (sample.HeartRate.HasValue && (sample.HeartRate < hrMin || sample.HeartRate > hrMax))
             {
                 throw new FaultException<DataFormatFault>(new DataFormatFault
                 {
