@@ -27,12 +27,19 @@ namespace Server
         {
             Console.WriteLine($"[SESIJA] Početak za učesnika: {meta.ParticipantId}");
 
+            string datePath = DateTime.Now.ToString("yyyy-MM-dd");
             string basePath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, "Data", meta.ParticipantId);
+                AppDomain.CurrentDomain.BaseDirectory,
+                "Data",
+                meta.ParticipantId,
+                "PolarH10",
+                datePath);
             Directory.CreateDirectory(basePath);
 
             fileWriter = new FileWriter(Path.Combine(basePath, "session.csv"));
             rejectWriter = new FileWriter(Path.Combine(basePath, "rejects.csv"));
+
+            Console.WriteLine($"[SESIJA] Kreiran direktorijum: {basePath}");
         }
 
         public void PushSample(EcgSample sample)
