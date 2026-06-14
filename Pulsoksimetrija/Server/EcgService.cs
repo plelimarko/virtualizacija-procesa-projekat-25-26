@@ -18,6 +18,13 @@ namespace Server
         private long _lastTimestamp = -1;
         private bool disposed = false;
 
+        private TransferMonitor monitor;
+        private ConsoleListener listener;
+        private string participantId;
+        private int totalAccepted = 0;
+        private int totalRejected = 0;
+        private int batchNumber = 0;
+
         private double ecgMin = double.Parse(ConfigurationManager.AppSettings["EcgMinMicroV"]);
         private double ecgMax = double.Parse(ConfigurationManager.AppSettings["EcgMaxMicroV"]);
         private double hrMin = double.Parse(ConfigurationManager.AppSettings["HrMinBpm"]);
@@ -25,25 +32,28 @@ namespace Server
 
         public void StartSession(SessionMeta meta)
         {
-            Console.WriteLine($"[SESIJA] Početak za učesnika: {meta.ParticipantId}");
+            participantId = meta.ParticipantId;
 
             string datePath = DateTime.Now.ToString("yyyy-MM-dd");
             string basePath = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
-                "Data",
-                meta.ParticipantId,
-                "PolarH10",
-                datePath);
+                "Data", meta.ParticipantId, "PolarH10", datePath);
             Directory.CreateDirectory(basePath);
 
             fileWriter = new FileWriter(Path.Combine(basePath, "session.csv"));
             rejectWriter = new FileWriter(Path.Combine(basePath, "rejects.csv"));
 
-            Console.WriteLine($"[SESIJA] Kreiran direktorijum: {basePath}");
+            monitor = new TransferMonitor();
+            listener = new ConsoleListener(monitor);
+
+            monitor.RaiseTransferStarted(this,
+                new TransferStartedEventArgs(meta.ParticipantId, meta.DeviceId));
         }
 
         public void PushSample(EcgSample sample)
         {
+            monitor.RaiseSampleReceived(this, new SampleReceivedEventArgs(sample));
+
             if (sample.TimestampMs <= _lastTimestamp)
             {
                 rejectWriter.WriteLine(
@@ -83,7 +93,6 @@ namespace Server
             fileWriter.WriteLine(line);
         }
 
-
         public string PushBatch(List<EcgSample> batch)
         {
             int accepted = 0;
@@ -91,6 +100,8 @@ namespace Server
 
             foreach (EcgSample sample in batch)
             {
+                monitor.RaiseSampleReceived(this, new SampleReceivedEventArgs(sample));
+
                 if (sample.TimestampMs <= _lastTimestamp)
                 {
                     rejectWriter.WriteLine(
@@ -122,13 +133,20 @@ namespace Server
                 accepted++;
             }
 
-            Console.WriteLine($"[BLOK] Primljen blok od {batch.Count} uzoraka. Prihvaćeno: {accepted}, Odbijeno: {rejected}");
+            batchNumber++;
+            totalAccepted += accepted;
+            totalRejected += rejected;
+
+            monitor.RaiseBatchReceived(this,
+                new BatchReceivedEventArgs(batchNumber, batch.Count, accepted, rejected));
+
             return $"OK:{accepted},REJECTED:{rejected}";
         }
 
         public void EndSession()
         {
-            Console.WriteLine("[SESIJA] Kraj prenosa.");
+            monitor.RaiseTransferCompleted(this,
+                new TransferCompletedEventArgs(participantId, totalAccepted, totalRejected));
             Dispose();
         }
 
@@ -159,7 +177,6 @@ namespace Server
                         rejectWriter.Dispose();
                         rejectWriter = null;
                     }
-                    Console.WriteLine("[DEBUG] Resursi uspešno oslobođeni.");
                 }
                 disposed = true;
             }
