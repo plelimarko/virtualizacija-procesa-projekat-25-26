@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnalyticsEngine.cs" />
     <Compile Include="ConsoleListener.cs" />
     <Compile Include="EcgService.cs" />
     <Compile Include="FileWriter.cs" />

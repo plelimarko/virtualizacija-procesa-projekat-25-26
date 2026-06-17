@@ -3,10 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
-using System.Linq;
 using System.ServiceModel;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Server
 {
@@ -20,6 +17,7 @@ namespace Server
 
         private TransferMonitor monitor;
         private ConsoleListener listener;
+        private AnalyticsEngine analytics;
         private string participantId;
         private int totalAccepted = 0;
         private int totalRejected = 0;
@@ -45,6 +43,7 @@ namespace Server
 
             monitor = new TransferMonitor();
             listener = new ConsoleListener(monitor);
+            analytics = new AnalyticsEngine(monitor);
 
             monitor.RaiseTransferStarted(this,
                 new TransferStartedEventArgs(meta.ParticipantId, meta.DeviceId));
@@ -60,9 +59,9 @@ namespace Server
                     $"{sample.RowIndex},Timestamp nije rastuci,{sample.TimestampMs}");
                 throw new FaultException<ValidationFault>(new ValidationFault
                 {
-                    Message = "Timestamp mora biti veći od prethodnog!",
+                    Message = "Timestamp mora biti veci od prethodnog!",
                     Parametar = "TimestampMs"
-                }, new FaultReason("Timestamp mora biti veći od prethodnog!"));
+                }, new FaultReason("Timestamp mora biti veci od prethodnog!"));
             }
             _lastTimestamp = sample.TimestampMs;
 
@@ -91,6 +90,7 @@ namespace Server
             string line = $"{sample.TimestampMs},{sample.EcgMicroV},{sample.HeartRate}," +
                            $"{sample.IBI_ms},{sample.AccX},{sample.AccY},{sample.AccZ},{sample.RowIndex}";
             fileWriter.WriteLine(line);
+            analytics.ProcessSample(this, sample);
         }
 
         public string PushBatch(List<EcgSample> batch)
@@ -130,6 +130,7 @@ namespace Server
                 string line = $"{sample.TimestampMs},{sample.EcgMicroV},{sample.HeartRate}," +
                                $"{sample.IBI_ms},{sample.AccX},{sample.AccY},{sample.AccZ},{sample.RowIndex}";
                 fileWriter.WriteLine(line);
+                analytics.ProcessSample(this, sample);
                 accepted++;
             }
 
